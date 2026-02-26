@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment — contains GitHub tokens, never commit
+.env
+
+# Local task drafts — personal working files
+tasks/
+
+# Server logs
+logs/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+projects.yaml

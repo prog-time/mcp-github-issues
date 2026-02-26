@@ -1,0 +1,20 @@
+projects:
+  # Single personal project
+  myproject:
+    owner: your-username       # GitHub username or organization
+    repo: your-repo            # Repository name
+    tokenEnv: GITHUB_TOKEN_MYPROJECT   # Must match a key in .env
+    tasksDir: ./tasks/myproject        # Local directory for draft .md files
+
+  # Organization project with a separate token
+  api:
+    owner: your-org
+    repo: backend-api
+    tokenEnv: GITHUB_TOKEN_API
+    tasksDir: ./tasks/api
+
+  web:
+    owner: your-org
+    repo: frontend
+    tokenEnv: GITHUB_TOKEN_WEB
+    tasksDir: ./tasks/web
