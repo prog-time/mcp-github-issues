@@ -240,23 +240,33 @@ After OAuth callback, users are redirected back to /login instead of the dashboa
 
 Reads a draft `.md` file and creates a GitHub Issue. Call this only after the user has reviewed the draft.
 
-| Parameter   | Type     | Required | Description                                        |
-|-------------|----------|----------|----------------------------------------------------|
-| `project`   | `string` | yes      | Project name from `projects.yaml`                  |
-| `draftFile` | `string` | yes      | Absolute path to the draft `.md` file              |
-| `assignee`  | `string` | no       | Overrides the assignee from the draft              |
-| `type`      | `string` | no       | Overrides the type / label (`bug`, `feature`, `task`) |
+| Parameter   | Type     | Required | Description                                           |
+|-------------|----------|----------|-------------------------------------------------------|
+| `project`   | `string` | yes      | Project name from `projects.yaml`                     |
+| `draftFile` | `string` | yes      | Absolute path to the draft `.md` file                 |
+| `assignee`  | `string` | no       | GitHub username (defaults to `owner` from `projects.yaml`) |
+| `type`      | `string` | no       | Overrides the type from the draft (`bug`, `feature`, `task`) |
 
-Labels applied automatically:
-- `bug` → `bug`
-- `feature` → `enhancement`
-- `task` → `task`
+**What happens at publish time:**
+
+- **Title** — prefixed with a type tag: `[BUG] Title`, `[FEATURE] Title`, `[TASK] Title`
+- **Assignee** — set to `owner` from `projects.yaml` unless overridden
+- **Label** — applied automatically based on type:
+  - `bug` → `bug`
+  - `feature` → `enhancement`
+  - `task` → `task`
+- **Body** — the `# Title` heading is stripped (already in the issue title), and a generated-by badge is prepended:
+
+```
+> [!NOTE]
+> The task was generated using the MCP server — prog-time/github-issues-server
+```
 
 Example response:
 ```
 ## Issue Published
 
-**#42**: Fix login redirect loop
+**#42**: [BUG] Fix login redirect loop
 **Repository**: acme-corp/backend-api
 **URL**: https://github.com/acme-corp/backend-api/issues/42
 ```

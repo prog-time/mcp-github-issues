@@ -5,16 +5,50 @@ import { Octokit } from "@octokit/rest";
 import { getProject, getToken } from "../config.js";
 import { logger } from "../logger.js";
 
+// ─── mappings ────────────────────────────────────────────────────────────────
+
 const LABEL_MAP: Record<string, string> = {
   bug: "bug",
   feature: "enhancement",
   task: "task",
 };
 
+const TYPE_TAG: Record<string, string> = {
+  bug: "BUG",
+  feature: "FEATURE",
+  task: "TASK",
+};
+
+const GENERATED_BADGE =
+  "> [!NOTE]\n" +
+  "> The task was generated using the MCP server — [prog-time/github-issues-server](https://github.com/prog-time/github-issues-server)";
+
+// ─── markdown helpers ─────────────────────────────────────────────────────────
+
+/** Extract raw title from the first `# Heading` line. */
 function extractTitle(markdown: string): string {
   const match = markdown.match(/^#\s+(.+)$/m);
   return match ? match[1].trim() : "Untitled";
 }
+
+/** Extract type from `**Type**: bug` meta line written by create_task_draft. */
+function extractType(markdown: string): string | null {
+  const match = markdown.match(/^\*\*Type\*\*:\s*(\w+)\s*$/m);
+  return match ? match[1].toLowerCase() : null;
+}
+
+/** Remove the first `# Heading` line (and trailing blank lines after it). */
+function stripTitle(markdown: string): string {
+  return markdown.replace(/^#[^\n]*\n+/, "").trimStart();
+}
+
+/** Build the final GitHub issue body. */
+function buildBody(markdown: string): string {
+  const body = stripTitle(markdown);
+  return `${GENERATED_BADGE}\n\n${body}`;
+}
+
+// ─── tool ─────────────────────────────────────────────────────────────────────
 
 export function register(server: McpServer): void {
   server.tool(
@@ -26,11 +60,11 @@ export function register(server: McpServer): void {
       assignee: z
         .string()
         .optional()
-        .describe("GitHub username to assign (overrides draft)"),
+        .describe("GitHub username to assign (overrides project owner)"),
       type: z
         .enum(["bug", "feature", "task"])
         .optional()
-        .describe("Issue type / label (overrides draft)"),
+        .describe("Issue type / label (overrides value in draft)"),
     },
     async (input) => {
       logger.info("tool called: publish_issue", {
@@ -44,38 +78,46 @@ export function register(server: McpServer): void {
         }
 
         const markdown = fs.readFileSync(input.draftFile, "utf-8");
-        const title = extractTitle(markdown);
 
+        // Resolve type: explicit override → parsed from draft → fallback "task"
+        const type = input.type ?? extractType(markdown) ?? "task";
+        const tag = TYPE_TAG[type] ?? "TASK";
+
+        // Title: [TAG] Raw title
+        const rawTitle = extractTitle(markdown);
+        const title = `[${tag}] ${rawTitle}`;
+
+        // Assignee: explicit override → project owner
         const project = getProject(input.project);
+        const assignee = input.assignee ?? project.owner;
+
+        // Labels: always set based on resolved type
+        const label = LABEL_MAP[type];
+        const labels: string[] = label ? [label] : [];
+
+        // Body: badge + draft body without the # Title line
+        const body = buildBody(markdown);
+
         const token = getToken(project);
-
         const octokit = new Octokit({ auth: token });
-
-        const labels: string[] = [];
-        if (input.type && LABEL_MAP[input.type]) {
-          labels.push(LABEL_MAP[input.type]);
-        }
-
-        const issueParams: Parameters<typeof octokit.issues.create>[0] = {
-          owner: project.owner,
-          repo: project.repo,
-          title,
-          body: markdown,
-          labels,
-        };
-
-        if (input.assignee) {
-          issueParams.assignees = [input.assignee];
-        }
 
         logger.info("publish_issue: creating GitHub issue", {
           owner: project.owner,
           repo: project.repo,
           title,
           labels,
+          assignee,
         });
 
-        const response = await octokit.issues.create(issueParams);
+        const response = await octokit.issues.create({
+          owner: project.owner,
+          repo: project.repo,
+          title,
+          body,
+          labels,
+          assignees: [assignee],
+        });
+
         const issue = response.data;
 
         logger.info("publish_issue done", {
