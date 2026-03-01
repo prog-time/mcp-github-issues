@@ -11,7 +11,7 @@ import { logger } from "../logger.js";
  * issue URL (e.g. https://github.com/owner/repo/issues/123) and returns the
  * numeric issue number.
  */
-function parseIssueNumber(raw: string): number {
+export function parseIssueNumber(raw: string): number {
   const trimmed = raw.trim();
 
   // Full URL: https://github.com/owner/repo/issues/123

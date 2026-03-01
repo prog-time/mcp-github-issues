@@ -18,7 +18,7 @@ const DraftInput = z.object({
     .describe("Issue type"),
 });
 
-function slugify(title: string): string {
+export function slugify(title: string): string {
   return title
     .toLowerCase()
     .replace(/[^a-z0-9а-яё\s]/gi, "")
@@ -26,7 +26,7 @@ function slugify(title: string): string {
     .slice(0, 60);
 }
 
-function buildMarkdown(input: z.infer<typeof DraftInput>): string {
+export function buildMarkdown(input: z.infer<typeof DraftInput>): string {
   const filesList =
     input.files.length > 0
       ? input.files.map((f) => `- \`${f}\``).join("\n")

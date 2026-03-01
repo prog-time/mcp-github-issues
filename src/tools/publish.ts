@@ -26,24 +26,24 @@ const GENERATED_BADGE =
 // ─── markdown helpers ─────────────────────────────────────────────────────────
 
 /** Extract raw title from the first `# Heading` line. */
-function extractTitle(markdown: string): string {
+export function extractTitle(markdown: string): string {
   const match = markdown.match(/^#\s+(.+)$/m);
   return match ? match[1].trim() : "Untitled";
 }
 
 /** Extract type from `**Type**: bug` meta line written by create_task_draft. */
-function extractType(markdown: string): string | null {
+export function extractType(markdown: string): string | null {
   const match = markdown.match(/^\*\*Type\*\*:\s*(\w+)\s*$/m);
   return match ? match[1].toLowerCase() : null;
 }
 
 /** Remove the first `# Heading` line (and trailing blank lines after it). */
-function stripTitle(markdown: string): string {
+export function stripTitle(markdown: string): string {
   return markdown.replace(/^#[^\n]*\n+/, "").trimStart();
 }
 
 /** Build the final GitHub issue body. */
-function buildBody(markdown: string): string {
+export function buildBody(markdown: string): string {
   const body = stripTitle(markdown);
   return `${GENERATED_BADGE}\n\n${body}`;
 }
