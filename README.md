@@ -11,6 +11,8 @@ The workflow is deliberate: the AI **drafts** a task as a local Markdown file fi
 ```
 AI assistant
     │
+    ├─ fetch_issue ────────► reads existing GitHub Issue for context
+    │
     ├─ create_task_draft ──► tasks/<project>/2026-02-26-fix-login-bug.md  (local file, review it)
     │
     └─ publish_issue ──────► github.com/your-org/your-repo/issues/42     (only after you confirm)
@@ -20,6 +22,8 @@ AI assistant
 2. The server saves a structured `.md` draft locally.
 3. You review or edit the file.
 4. You tell the AI to publish — it creates the GitHub Issue via the API.
+
+You can also ask the AI to fetch an existing issue by number or URL — it will retrieve the full context (title, body, labels, assignees, comments) so you can start working on it immediately.
 
 ---
 
@@ -236,6 +240,38 @@ After OAuth callback, users are redirected back to /login instead of the dashboa
 
 ---
 
+### `fetch_issue`
+
+Fetches an existing GitHub Issue by number or URL and returns its full context.
+
+| Parameter          | Type      | Required | Description                                              |
+|--------------------|-----------|----------|----------------------------------------------------------|
+| `project`          | `string`  | yes      | Project name from `projects.yaml`                        |
+| `issue`            | `string`  | yes      | Issue number (e.g. `123`) or full GitHub issue URL       |
+| `include_comments` | `boolean` | no       | Whether to fetch comments as well (default: `true`)      |
+
+Example response:
+
+```
+## Issue #123: Fix login redirect loop
+
+| Field      | Value                                           |
+|---|---|
+| Repository | acme-corp/backend-api                           |
+| State      | 🟢 open                                         |
+| Labels     | `bug`, `urgent`                                 |
+| Assignees  | @alice                                          |
+| Created    | 2026-01-15                                      |
+| Updated    | 2026-02-20                                      |
+| URL        | https://github.com/acme-corp/backend-api/issues/123 |
+
+### Description
+
+After OAuth callback, users are redirected back to /login instead of the dashboard.
+```
+
+---
+
 ### `publish_issue`
 
 Reads a draft `.md` file and creates a GitHub Issue. Call this only after the user has reviewed the draft.
@@ -302,7 +338,16 @@ github-issues-server/
 │   └── tools/
 │       ├── listProjects.ts
 │       ├── draft.ts
-│       └── publish.ts
+│       ├── publish.ts
+│       └── fetchIssue.ts
+├── tests/
+│   └── src/
+│       ├── config.test.ts
+│       └── tools/
+│           ├── draft.test.ts
+│           ├── fetchIssue.test.ts
+│           ├── listProjects.test.ts
+│           └── publish.test.ts
 ├── tasks/                 # Auto-created; stores draft .md files
 │   └── <project>/
 ├── logs/
@@ -312,6 +357,7 @@ github-issues-server/
 ├── .env                   # GitHub tokens (gitignored)
 ├── .env.example           # Template
 ├── mcp.sh                 # Server launcher + setup in one script
+├── vitest.config.ts
 ├── package.json
 └── tsconfig.json
 ```
@@ -358,10 +404,29 @@ git pull
 3. Make your changes
 4. Open a pull request
 
-To run in dev mode (with live reload):
+To run in dev mode:
 
 ```bash
 npm run dev
+```
+
+To run tests:
+
+```bash
+npm test            # run once
+npm run test:watch  # watch mode
+```
+
+To check types:
+
+```bash
+npx tsc --noEmit
+```
+
+To lint:
+
+```bash
+npx eslint .
 ```
 
 To build:
@@ -370,6 +435,8 @@ To build:
 npm run build
 npm start
 ```
+
+CI runs ESLint, type-check, and the full test suite on every push and pull request against `main`.
 
 ---
 
