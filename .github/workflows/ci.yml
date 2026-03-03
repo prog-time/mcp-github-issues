@@ -22,7 +22,17 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: bash linting/check_scripts/check_eslint_all.sh
+        run: |
+          LINT_DIRS=("src/" "tests/")
+
+          echo "ℹ️ Running ESLint on: ${LINT_DIRS[*]}"
+
+          if npx eslint "${LINT_DIRS[@]}" --fix; then
+            echo "✅ ESLint passed!"
+          else
+            echo "❌ ESLint found issues!"
+            exit 1
+          fi
 
   tests:
     name: Tests
@@ -39,7 +49,17 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: bash linting/check_scripts/check_tests_all.sh
+        run: |
+          TEST_RUNNER="vitest"
+
+          echo "ℹ️ Running tests via $TEST_RUNNER..."
+
+          if npx "$TEST_RUNNER" run; then
+            echo "✅ All tests passed!"
+          else
+            echo "❌ Tests failed!"
+            exit 1
+          fi
 
   tsc:
     name: TypeScript
@@ -56,4 +76,19 @@ jobs:
         run: npm ci
 
       - name: Run type check
-        run: bash linting/check_scripts/check_tsc_all.sh
+        run: |
+          TS_CONFIG="tsconfig.check.json"
+
+          if [ ! -f "$TS_CONFIG" ]; then
+            echo "::error::Config file $TS_CONFIG not found"
+            exit 1
+          fi
+
+          echo "ℹ️ Running type check with $TS_CONFIG..."
+
+          if npx tsc --project "$TS_CONFIG"; then
+            echo "✅ TypeScript check passed!"
+          else
+            echo "❌ TypeScript check failed!"
+            exit 1
+          fi
