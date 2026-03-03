@@ -83,9 +83,11 @@ export function register(server: McpServer): void {
         const type = input.type ?? extractType(markdown) ?? "task";
         const tag = TYPE_TAG[type] ?? "TASK";
 
-        // Title: [TAG] Raw title
+        // Title: [TAG] Raw title (skip if title already has a tag)
         const rawTitle = extractTitle(markdown);
-        const title = `[${tag}] ${rawTitle}`;
+        const title = /^\[[A-Z]+\]/.test(rawTitle)
+          ? rawTitle
+          : `[${tag}] ${rawTitle}`;
 
         // Assignee: explicit override → project owner
         const project = getProject(input.project);
