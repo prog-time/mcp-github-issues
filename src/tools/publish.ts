@@ -13,11 +13,6 @@ const LABEL_MAP: Record<string, string> = {
   task: "task",
 };
 
-const TYPE_TAG: Record<string, string> = {
-  bug: "BUG",
-  feature: "FEATURE",
-  task: "TASK",
-};
 
 const GENERATED_BADGE =
   "> [!NOTE]\n" +
@@ -81,13 +76,9 @@ export function register(server: McpServer): void {
 
         // Resolve type: explicit override → parsed from draft → fallback "task"
         const type = input.type ?? extractType(markdown) ?? "task";
-        const tag = TYPE_TAG[type] ?? "TASK";
 
-        // Title: [TAG] Raw title (skip if title already has a tag)
-        const rawTitle = extractTitle(markdown);
-        const title = /^\[[A-Z]+\]/.test(rawTitle)
-          ? rawTitle
-          : `[${tag}] ${rawTitle}`;
+        // Title: raw title as-is
+        const title = extractTitle(markdown);
 
         // Assignee: explicit override → project owner
         const project = getProject(input.project);
