@@ -1,8 +1,7 @@
 import fs from "fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { Octokit } from "@octokit/rest";
-import { getProject, getToken } from "../config.js";
+import { getProject, getOctokit } from "../config.js";
 import { logger } from "../logger.js";
 
 // ─── mappings ────────────────────────────────────────────────────────────────
@@ -12,7 +11,6 @@ const LABEL_MAP: Record<string, string> = {
   feature: "enhancement",
   task: "task",
 };
-
 
 const GENERATED_BADGE =
   "> [!NOTE]\n" +
@@ -55,7 +53,7 @@ export function register(server: McpServer): void {
       assignee: z
         .string()
         .optional()
-        .describe("GitHub username to assign (overrides project owner)"),
+        .describe("GitHub username to assign (leave empty to skip assignment)"),
       type: z
         .enum(["bug", "feature", "task"])
         .optional()
@@ -80,10 +78,6 @@ export function register(server: McpServer): void {
         // Title: raw title as-is
         const title = extractTitle(markdown);
 
-        // Assignee: explicit override → project owner
-        const project = getProject(input.project);
-        const assignee = input.assignee ?? project.owner;
-
         // Labels: always set based on resolved type
         const label = LABEL_MAP[type];
         const labels: string[] = label ? [label] : [];
@@ -91,15 +85,15 @@ export function register(server: McpServer): void {
         // Body: badge + draft body without the # Title line
         const body = buildBody(markdown);
 
-        const token = getToken(project);
-        const octokit = new Octokit({ auth: token });
+        const project = getProject(input.project);
+        const octokit = getOctokit(project);
 
         logger.info("publish_issue: creating GitHub issue", {
           owner: project.owner,
           repo: project.repo,
           title,
           labels,
-          assignee,
+          assignee: input.assignee ?? null,
         });
 
         const response = await octokit.issues.create({
@@ -108,7 +102,7 @@ export function register(server: McpServer): void {
           title,
           body,
           labels,
-          assignees: [assignee],
+          ...(input.assignee ? { assignees: [input.assignee] } : {}),
         });
 
         const issue = response.data;

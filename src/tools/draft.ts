@@ -5,7 +5,9 @@ import { z } from "zod";
 import { getProject, resolveTasksDir } from "../config.js";
 import { logger } from "../logger.js";
 
-const DraftInput = z.object({
+// ─── schema (single source of truth) ─────────────────────────────────────────
+
+export const DraftInput = z.object({
   project: z.string().describe("Project name from projects.yaml"),
   title: z.string().describe("Task title"),
   context: z.string().describe("Task context and description"),
@@ -17,6 +19,8 @@ const DraftInput = z.object({
     .default("task")
     .describe("Issue type"),
 });
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
 
 export function slugify(title: string): string {
   return title
@@ -62,22 +66,13 @@ ${checklistItems}
 `;
 }
 
+// ─── tool ─────────────────────────────────────────────────────────────────────
+
 export function register(server: McpServer): void {
   server.tool(
     "create_task_draft",
     "Create a task draft as a local .md file without publishing to GitHub",
-    {
-      project: z.string().describe("Project name from projects.yaml"),
-      title: z.string().describe("Task title"),
-      context: z.string().describe("Task context and description"),
-      files: z.array(z.string()).default([]).describe("Affected file paths"),
-      checklist: z.array(z.string()).default([]).describe("Checklist items"),
-      assignee: z.string().optional().describe("GitHub username to assign"),
-      type: z
-        .enum(["bug", "feature", "task"])
-        .default("task")
-        .describe("Issue type"),
-    },
+    DraftInput.shape,
     async (input) => {
       logger.info("tool called: create_task_draft", {
         project: input.project,
@@ -86,18 +81,17 @@ export function register(server: McpServer): void {
       });
 
       try {
-        const parsed = DraftInput.parse(input);
-        const project = getProject(parsed.project);
+        const project = getProject(input.project);
         const tasksDir = resolveTasksDir(project);
 
         fs.mkdirSync(tasksDir, { recursive: true });
 
         const date = new Date().toISOString().slice(0, 10);
-        const slug = slugify(parsed.title);
+        const slug = slugify(input.title);
         const filename = `${date}-${slug}.md`;
         const filePath = path.join(tasksDir, filename);
 
-        const markdown = buildMarkdown(parsed);
+        const markdown = buildMarkdown(input);
         fs.writeFileSync(filePath, markdown, "utf-8");
 
         logger.info("create_task_draft done", { filePath });

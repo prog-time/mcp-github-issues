@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { Octokit } from "@octokit/rest";
-import { getProject, getToken } from "../config.js";
+import { getProject, getOctokit } from "../config.js";
 import { logger } from "../logger.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -49,6 +48,13 @@ export function register(server: McpServer): void {
         .boolean()
         .default(true)
         .describe("Whether to include issue comments (default: true)"),
+      comment_limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(50)
+        .describe("Max number of comments to fetch (default: 50, max: 100)"),
     },
     async (input) => {
       logger.info("tool called: fetch_issue", {
@@ -59,8 +65,7 @@ export function register(server: McpServer): void {
       try {
         const project = getProject(input.project);
         const issueNumber = parseIssueNumber(input.issue);
-        const token = getToken(project);
-        const octokit = new Octokit({ auth: token });
+        const octokit = getOctokit(project);
 
         logger.info("fetch_issue: requesting GitHub issue", {
           owner: project.owner,
@@ -80,7 +85,7 @@ export function register(server: McpServer): void {
                 owner: project.owner,
                 repo: project.repo,
                 issue_number: issueNumber,
-                per_page: 50,
+                per_page: input.comment_limit,
               })
             : Promise.resolve({ data: [] }),
         ]);
