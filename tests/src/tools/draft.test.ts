@@ -5,15 +5,15 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 vi.mock("fs", () => ({
   default: {
-    existsSync: vi.fn(),
-    readFileSync: vi.fn(),
+    existsSync: vi.fn().mockReturnValue(true),
+    readFileSync: vi.fn().mockReturnValue(""),
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
     appendFileSync: vi.fn(),
   },
 }));
 
-vi.mock("../../src/logger.js", () => ({
+vi.mock("../../../src/logger.js", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("../../src/logger.js", () => ({
   },
 }));
 
-vi.mock("../../src/config.js", () => ({
+vi.mock("../../../src/config.js", () => ({
   getProject: vi.fn().mockReturnValue({
     owner: "myorg",
     repo: "myrepo",
