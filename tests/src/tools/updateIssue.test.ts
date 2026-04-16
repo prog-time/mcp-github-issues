@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // ─── mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock("../../src/logger.js", () => ({
+vi.mock("../../../src/logger.js", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -13,11 +13,13 @@ vi.mock("../../src/logger.js", () => ({
   },
 }));
 
-const mockUpdate = vi.fn();
-const mockAddLabels = vi.fn();
-const mockRemoveLabel = vi.fn();
+const { mockUpdate, mockAddLabels, mockRemoveLabel } = vi.hoisted(() => ({
+  mockUpdate: vi.fn(),
+  mockAddLabels: vi.fn(),
+  mockRemoveLabel: vi.fn(),
+}));
 
-vi.mock("../../src/config.js", () => ({
+vi.mock("../../../src/config.js", () => ({
   getProject: vi.fn().mockReturnValue({
     owner: "myorg",
     repo: "myrepo",

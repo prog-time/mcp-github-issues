@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // ─── mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock("../../src/logger.js", () => ({
+vi.mock("../../../src/logger.js", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -13,7 +13,12 @@ vi.mock("../../src/logger.js", () => ({
   },
 }));
 
-vi.mock("../../src/config.js", () => ({
+const { mockIssueGet, mockListComments } = vi.hoisted(() => ({
+  mockIssueGet: vi.fn(),
+  mockListComments: vi.fn(),
+}));
+
+vi.mock("../../../src/config.js", () => ({
   getProject: vi.fn().mockReturnValue({
     owner: "myorg",
     repo: "myrepo",
@@ -22,17 +27,12 @@ vi.mock("../../src/config.js", () => ({
   }),
   getToken: vi.fn().mockReturnValue("ghp_testtoken"),
   resolveTasksDir: vi.fn().mockReturnValue("/abs/tasks/api"),
-}));
-
-const mockIssueGet = vi.fn();
-const mockListComments = vi.fn();
-vi.mock("@octokit/rest", () => ({
-  Octokit: vi.fn().mockImplementation(() => ({
+  getOctokit: vi.fn().mockReturnValue({
     issues: {
       get: mockIssueGet,
       listComments: mockListComments,
     },
-  })),
+  }),
 }));
 
 // ─── imports ─────────────────────────────────────────────────────────────────
