@@ -1,4 +1,4 @@
-# github-issues-server
+# mcp-github-issues
 
 An MCP (Model Context Protocol) server that lets AI assistants manage GitHub Issues across multiple projects — without ever leaving the chat.
 
@@ -44,8 +44,8 @@ AI assistant
 ## Quick start
 
 ```bash
-git clone https://github.com/prog-time/github-issues-server.git
-cd github-issues-server
+git clone https://github.com/prog-time/mcp-github-issues.git
+cd mcp-github-issues
 
 cp .env.example .env
 # edit .env — add your GitHub token(s)
@@ -125,10 +125,10 @@ Task directories are created automatically when the first draft is saved.
 Registers the server as `project-agent` with user-level scope (visible in all your projects):
 
 ```
-=== github-issues-server MCP Setup ===
+=== mcp-github-issues MCP Setup ===
   Server name : project-agent
   Scope       : user
-  Dir         : /path/to/github-issues-server
+  Dir         : /path/to/mcp-github-issues
 
 [1/3] Installing dependencies... Done.
 [2/3] Registering MCP server with Claude CLI... Registered 'project-agent' (scope: user).
@@ -150,7 +150,7 @@ Custom server name or scope:
 
 ```bash
 npm install
-claude mcp add -s user -- project-agent /absolute/path/to/github-issues-server/mcp.sh
+claude mcp add -s user -- project-agent /absolute/path/to/mcp-github-issues/mcp.sh
 ```
 
 ---
@@ -174,7 +174,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 {
   "mcpServers": {
     "project-agent": {
-      "command": "/absolute/path/to/github-issues-server/mcp.sh",
+      "command": "/absolute/path/to/mcp-github-issues/mcp.sh",
       "env": {}
     }
   }
@@ -346,7 +346,7 @@ AI:   Issue #38 updated. State → closed.
 ## Project structure
 
 ```
-github-issues-server/
+mcp-github-issues/
 ├── src/
 │   ├── server.ts          # MCP server entry point
 │   ├── config.ts          # Loads & validates projects.yaml, Octokit cache

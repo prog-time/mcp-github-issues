@@ -50,7 +50,7 @@ cmd_setup() {
   local name="${1:-project-agent}"
   local scope="${2:-user}"
 
-  echo "=== github-issues-server MCP Setup ==="
+  echo "=== mcp-github-issues MCP Setup ==="
   echo "  Server name : $name"
   echo "  Scope       : $scope"
   echo "  Dir         : $DIR"
