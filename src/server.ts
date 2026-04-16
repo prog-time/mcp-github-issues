@@ -4,15 +4,15 @@ import { registerAllTools } from "./router.js";
 import { logger } from "./logger.js";
 
 const server = new McpServer({
-  name: "github-issues-server",
-  version: "1.0.0",
+  name: "mcp-github-issues",
+  version: "1.1.0",
 });
 
 registerAllTools(server);
 
-logger.info("github-issues-server MCP server starting", { logFile: logger.logFile });
+logger.info("mcp-github-issues MCP server starting", { logFile: logger.logFile });
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
-logger.info("github-issues-server MCP server connected via stdio");
+logger.info("mcp-github-issues MCP server connected via stdio");

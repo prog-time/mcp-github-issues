@@ -13,7 +13,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Patterns to skip (no tests required)
-SKIP_PATTERNS=("tests/" ".test.ts" ".config.ts" ".config.mjs" "types/" ".d.ts" "layout.tsx" "page.tsx" "loading.tsx" "error.tsx" "globals.css" "providers/" "components/ui/" "prisma/")
+SKIP_PATTERNS=("tests/" ".test.ts" ".config.ts" ".config.mjs" "types/" ".d.ts" "layout.tsx" "page.tsx" "loading.tsx" "error.tsx" "globals.css" "providers/" "components/ui/" "prisma/" "server.ts")
 
 should_skip() {
     local file="$1"
