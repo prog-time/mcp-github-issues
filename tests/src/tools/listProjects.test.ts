@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // ─── mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock("../../src/logger.js", () => ({
+vi.mock("../../../src/logger.js", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock("../../src/logger.js", () => ({
   },
 }));
 
-vi.mock("../../src/config.js", () => ({
+vi.mock("../../../src/config.js", () => ({
   config: {
     projects: {
       api: {

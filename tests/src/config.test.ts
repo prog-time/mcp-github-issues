@@ -9,7 +9,7 @@ describe("getProject", () => {
     const project = getProject("talksy");
     expect(project.owner).toBe("prog-time");
     expect(project.repo).toBe("talksy");
-    expect(project.tokenEnv).toBe("GITHUB_TOKEN_TALKSY");
+    expect(project.tokenEnv).toBe("GITHUB_TOKEN");
     expect(project.tasksDir).toBe("./tasks/talksy");
   });
 
@@ -26,19 +26,19 @@ describe("getProject", () => {
 
 describe("getToken", () => {
   afterEach(() => {
-    delete process.env.GITHUB_TOKEN_TALKSY;
+    delete process.env.GITHUB_TOKEN;
   });
 
   it("returns the token value from the environment variable", () => {
-    process.env.GITHUB_TOKEN_TALKSY = "ghp_test_secret";
+    process.env.GITHUB_TOKEN = "ghp_test_secret";
     const project = getProject("talksy");
     expect(getToken(project)).toBe("ghp_test_secret");
   });
 
   it("throws when the environment variable is not set", () => {
-    delete process.env.GITHUB_TOKEN_TALKSY;
+    delete process.env.GITHUB_TOKEN;
     const project = getProject("talksy");
-    expect(() => getToken(project)).toThrow("GITHUB_TOKEN_TALKSY");
+    expect(() => getToken(project)).toThrow("GITHUB_TOKEN");
   });
 });
 
