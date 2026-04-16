@@ -1,9 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // ─── mocks ────────────────────────────────────────────────────────────────────
 
-const mockRegister = vi.fn();
+const { mockRegister } = vi.hoisted(() => ({ mockRegister: vi.fn() }));
 
 vi.mock("../../src/tools/listProjects.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/draft.js", () => ({ register: mockRegister }));
@@ -21,6 +21,10 @@ import { registerAllTools } from "../../src/router.js";
 // ─── tests ────────────────────────────────────────────────────────────────────
 
 describe("registerAllTools", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("registers all 8 tools", () => {
     const server = {} as McpServer;
     registerAllTools(server);
