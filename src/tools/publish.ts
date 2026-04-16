@@ -14,7 +14,7 @@ const LABEL_MAP: Record<string, string> = {
 
 const GENERATED_BADGE =
   "> [!NOTE]\n" +
-  "> The task was generated using the MCP server — [prog-time/github-issues-server](https://github.com/prog-time/github-issues-server)";
+  "> The task was generated using the MCP server — [prog-time/mcp-github-issues](https://github.com/prog-time/mcp-github-issues)";
 
 // ─── markdown helpers ─────────────────────────────────────────────────────────
 
@@ -33,6 +33,11 @@ export function extractType(markdown: string): string | null {
 /** Remove the first `# Heading` line (and trailing blank lines after it). */
 export function stripTitle(markdown: string): string {
   return markdown.replace(/^#[^\n]*\n+/, "").trimStart();
+}
+
+/** Build prefixed title: `[TYPE] Raw Title`. */
+export function buildTitle(rawTitle: string, type: string): string {
+  return `[${type.toUpperCase()}] ${rawTitle}`;
 }
 
 /** Build the final GitHub issue body. */
@@ -75,8 +80,9 @@ export function register(server: McpServer): void {
         // Resolve type: explicit override → parsed from draft → fallback "task"
         const type = input.type ?? extractType(markdown) ?? "task";
 
-        // Title: raw title as-is
-        const title = extractTitle(markdown);
+        // Title: prefixed with type tag → [TYPE] Raw Title
+        const rawTitle = extractTitle(markdown);
+        const title = buildTitle(rawTitle, type);
 
         // Labels: always set based on resolved type
         const label = LABEL_MAP[type];

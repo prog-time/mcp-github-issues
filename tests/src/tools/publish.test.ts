@@ -5,15 +5,15 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 vi.mock("fs", () => ({
   default: {
-    existsSync: vi.fn(),
-    readFileSync: vi.fn(),
+    existsSync: vi.fn().mockReturnValue(true),
+    readFileSync: vi.fn().mockReturnValue(""),
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
     appendFileSync: vi.fn(),
   },
 }));
 
-vi.mock("../../src/logger.js", () => ({
+vi.mock("../../../src/logger.js", () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -23,7 +23,11 @@ vi.mock("../../src/logger.js", () => ({
   },
 }));
 
-vi.mock("../../src/config.js", () => ({
+const { mockCreate } = vi.hoisted(() => ({
+  mockCreate: vi.fn(),
+}));
+
+vi.mock("../../../src/config.js", () => ({
   getProject: vi.fn().mockReturnValue({
     owner: "myorg",
     repo: "myrepo",
@@ -32,13 +36,9 @@ vi.mock("../../src/config.js", () => ({
   }),
   getToken: vi.fn().mockReturnValue("ghp_testtoken"),
   resolveTasksDir: vi.fn().mockReturnValue("/abs/tasks/api"),
-}));
-
-const mockCreate = vi.fn();
-vi.mock("@octokit/rest", () => ({
-  Octokit: vi.fn().mockImplementation(() => ({
+  getOctokit: vi.fn().mockReturnValue({
     issues: { create: mockCreate },
-  })),
+  }),
 }));
 
 // ─── imports ─────────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ describe("buildBody", () => {
   it("prepends the generated badge", () => {
     const body = buildBody(SAMPLE_DRAFT);
     expect(body).toContain("[!NOTE]");
-    expect(body).toContain("github-issues-server");
+    expect(body).toContain("mcp-github-issues");
   });
 
   it("does not include the title heading in the body", () => {
