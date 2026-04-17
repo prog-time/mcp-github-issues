@@ -5,7 +5,7 @@ import { logger } from "./logger.js";
 
 const server = new McpServer({
   name: "mcp-github-issues",
-  version: "1.1.0",
+  version: "1.2.0",
 });
 
 registerAllTools(server);

@@ -1,6 +1,6 @@
 {
   "name": "mcp-github-issues",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Multi-project MCP server for GitHub Issues management",
   "type": "module",
   "main": "dist/server.js",

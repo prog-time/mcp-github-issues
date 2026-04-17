@@ -6,11 +6,9 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 const { mockRegister } = vi.hoisted(() => ({ mockRegister: vi.fn() }));
 
 vi.mock("../../src/tools/listProjects.js", () => ({ register: mockRegister }));
-vi.mock("../../src/tools/draft.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/publish.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/fetchIssue.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/listIssues.js", () => ({ register: mockRegister }));
-vi.mock("../../src/tools/listDrafts.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/addComment.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/updateIssue.js", () => ({ register: mockRegister }));
 
@@ -25,10 +23,10 @@ describe("registerAllTools", () => {
     vi.clearAllMocks();
   });
 
-  it("registers all 8 tools", () => {
+  it("registers all 6 tools", () => {
     const server = {} as McpServer;
     registerAllTools(server);
-    expect(mockRegister).toHaveBeenCalledTimes(8);
+    expect(mockRegister).toHaveBeenCalledTimes(6);
   });
 
   it("passes the server instance to each register call", () => {

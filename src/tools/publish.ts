@@ -1,4 +1,3 @@
-import fs from "fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getProject, getOctokit } from "../config.js";
@@ -16,34 +15,64 @@ const GENERATED_BADGE =
   "> [!NOTE]\n" +
   "> The task was generated using the MCP server — [prog-time/mcp-github-issues](https://github.com/prog-time/mcp-github-issues)";
 
-// ─── markdown helpers ─────────────────────────────────────────────────────────
+// ─── schema ──────────────────────────────────────────────────────────────────
 
-/** Extract raw title from the first `# Heading` line. */
-export function extractTitle(markdown: string): string {
-  const match = markdown.match(/^#\s+(.+)$/m);
-  return match ? match[1].trim() : "Untitled";
-}
+export const PublishInput = z.object({
+  project: z.string().describe("Project name from projects.yaml"),
+  title: z.string().describe("Issue title (without type prefix)"),
+  context: z.string().describe("Task context and description"),
+  files: z.array(z.string()).default([]).describe("Affected file paths"),
+  checklist: z.array(z.string()).default([]).describe("Checklist items"),
+  assignee: z
+    .string()
+    .optional()
+    .describe("GitHub username to assign (leave empty to skip assignment)"),
+  type: z
+    .enum(["bug", "feature", "task"])
+    .default("task")
+    .describe("Issue type / label"),
+});
 
-/** Extract type from `**Type**: bug` meta line written by create_task_draft. */
-export function extractType(markdown: string): string | null {
-  const match = markdown.match(/^\*\*Type\*\*:\s*(\w+)\s*$/m);
-  return match ? match[1].toLowerCase() : null;
-}
+// ─── helpers ─────────────────────────────────────────────────────────────────
 
-/** Remove the first `# Heading` line (and trailing blank lines after it). */
-export function stripTitle(markdown: string): string {
-  return markdown.replace(/^#[^\n]*\n+/, "").trimStart();
-}
-
-/** Build prefixed title: `[TYPE] Raw Title`. */
 export function buildTitle(rawTitle: string, type: string): string {
   return `[${type.toUpperCase()}] ${rawTitle}`;
 }
 
-/** Build the final GitHub issue body. */
-export function buildBody(markdown: string): string {
-  const body = stripTitle(markdown);
-  return `${GENERATED_BADGE}\n\n${body}`;
+export function buildBody(input: z.infer<typeof PublishInput>): string {
+  const filesList =
+    input.files.length > 0
+      ? input.files.map((f) => `- \`${f}\``).join("\n")
+      : "_No files specified_";
+
+  const checklistItems =
+    input.checklist.length > 0
+      ? input.checklist.map((item) => `- [ ] ${item}`).join("\n")
+      : "_No checklist items_";
+
+  const meta = [
+    `**Type**: ${input.type}`,
+    input.assignee ? `**Assignee**: @${input.assignee}` : null,
+  ]
+    .filter(Boolean)
+    .join("  \n");
+
+  return `${GENERATED_BADGE}
+
+${meta}
+
+## Context
+
+${input.context}
+
+## Affected Files
+
+${filesList}
+
+## Checklist
+
+${checklistItems}
+`;
 }
 
 // ─── tool ─────────────────────────────────────────────────────────────────────
@@ -51,45 +80,20 @@ export function buildBody(markdown: string): string {
 export function register(server: McpServer): void {
   server.tool(
     "publish_issue",
-    "Publish a draft .md file as a GitHub Issue. Only call this after user confirmation.",
-    {
-      project: z.string().describe("Project name from projects.yaml"),
-      draftFile: z.string().describe("Absolute path to the draft .md file"),
-      assignee: z
-        .string()
-        .optional()
-        .describe("GitHub username to assign (leave empty to skip assignment)"),
-      type: z
-        .enum(["bug", "feature", "task"])
-        .optional()
-        .describe("Issue type / label (overrides value in draft)"),
-    },
+    "Create a new GitHub Issue with task context. Only call this after user confirmation.",
+    PublishInput.shape,
     async (input) => {
       logger.info("tool called: publish_issue", {
         project: input.project,
-        draftFile: input.draftFile,
+        title: input.title,
+        type: input.type,
       });
 
       try {
-        if (!fs.existsSync(input.draftFile)) {
-          throw new Error(`Draft file not found: ${input.draftFile}`);
-        }
-
-        const markdown = fs.readFileSync(input.draftFile, "utf-8");
-
-        // Resolve type: explicit override → parsed from draft → fallback "task"
-        const type = input.type ?? extractType(markdown) ?? "task";
-
-        // Title: prefixed with type tag → [TYPE] Raw Title
-        const rawTitle = extractTitle(markdown);
-        const title = buildTitle(rawTitle, type);
-
-        // Labels: always set based on resolved type
-        const label = LABEL_MAP[type];
+        const title = buildTitle(input.title, input.type);
+        const label = LABEL_MAP[input.type];
         const labels: string[] = label ? [label] : [];
-
-        // Body: badge + draft body without the # Title line
-        const body = buildBody(markdown);
+        const body = buildBody(input);
 
         const project = getProject(input.project);
         const octokit = getOctokit(project);

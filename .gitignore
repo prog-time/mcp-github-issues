@@ -7,7 +7,7 @@ dist/
 # Environment — contains GitHub tokens, never commit
 .env
 
-# Local task drafts — personal working files
+# Legacy local drafts directory (no longer used since 1.2.0, kept to ignore any leftovers)
 tasks/
 
 # Server logs

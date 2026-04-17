@@ -20,13 +20,11 @@ vi.mock("../../../src/config.js", () => ({
         owner: "myorg",
         repo: "backend",
         tokenEnv: "GITHUB_TOKEN_API",
-        tasksDir: "./tasks/api",
       },
       web: {
         owner: "myorg",
         repo: "frontend",
         tokenEnv: "GITHUB_TOKEN_WEB",
-        tasksDir: "./tasks/web",
       },
     },
   },
@@ -79,15 +77,6 @@ describe("list_projects handler", () => {
     const text = result.content[0].text;
     expect(text).toContain("myorg/backend");
     expect(text).toContain("myorg/frontend");
-  });
-
-  it("includes the tasks directory for each project", async () => {
-    const { server, handlers } = createMockServer();
-    register(server);
-    const result = await handlers["list_projects"]({});
-    const text = result.content[0].text;
-    expect(text).toContain("./tasks/api");
-    expect(text).toContain("./tasks/web");
   });
 
   it("returns a heading in the response", async () => {

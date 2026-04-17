@@ -22,7 +22,6 @@ vi.mock("../../../src/config.js", () => ({
     owner: "myorg",
     repo: "myrepo",
     tokenEnv: "GITHUB_TOKEN_API",
-    tasksDir: "./tasks/api",
   }),
   getOctokit: vi.fn().mockReturnValue({
     issues: { createComment: mockCreateComment },

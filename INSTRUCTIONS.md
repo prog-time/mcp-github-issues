@@ -2,9 +2,9 @@
 
 ## Что это такое
 
-mcp-github-issues — это MCP-сервер (Model Context Protocol) для управления задачами и GitHub Issues через AI-ассистентов (Claude Desktop, Claude Code, PhpStorm). Сервер позволяет создавать черновики задач локально, просматривать и редактировать их, а затем публиковать как GitHub Issues — всё это через диалог с ИИ.
+mcp-github-issues — это MCP-сервер (Model Context Protocol) для управления GitHub Issues через AI-ассистентов (Claude Desktop, Claude Code, PhpStorm). Сервер позволяет создавать, просматривать, комментировать и обновлять Issues в нескольких репозиториях — всё это через диалог с ИИ.
 
-Ключевой принцип: **draft-first подход**. Задачи сначала сохраняются как локальные `.md`-файлы, и только после явного подтверждения публикуются в GitHub. Это предотвращает случайное создание Issues.
+Ключевой принцип: **ИИ предлагает — вы подтверждаете**. Перед публикацией Issue ассистент формирует его содержание (заголовок, контекст, файлы, чеклист) и показывает вам. Issue создаётся в GitHub только после явного подтверждения — это предотвращает случайную публикацию.
 
 ---
 
@@ -71,7 +71,6 @@ projects:
     owner: владелец-или-организация   # GitHub username или org
     repo: название-репозитория        # Имя репо на GitHub
     tokenEnv: GITHUB_TOKEN            # Имя переменной из .env
-    tasksDir: ./tasks/имя-проекта     # Папка для черновиков
 ```
 
 Пример с несколькими проектами:
@@ -82,22 +81,17 @@ projects:
     owner: myorg
     repo: api-server
     tokenEnv: GITHUB_TOKEN
-    tasksDir: ./tasks/backend
 
   frontend:
     owner: myorg
     repo: web-client
     tokenEnv: GITHUB_TOKEN
-    tasksDir: ./tasks/frontend
 
   private-project:
     owner: myuser
     repo: secret-repo
     tokenEnv: GITHUB_TOKEN_PRIVATE
-    tasksDir: ./tasks/private-project
 ```
-
-Директории `tasks/<проект>/` создаются автоматически при первом создании черновика.
 
 ---
 
@@ -112,14 +106,14 @@ chmod +x mcp.sh
 ./mcp.sh setup
 ```
 
-По умолчанию сервер регистрируется с именем `project-agent` в scope `user`. Можно переопределить:
+По умолчанию сервер регистрируется с именем `mcp-github-issues` в scope `user`. Можно переопределить:
 
 ```bash
 ./mcp.sh setup my-server-name project
 ```
 
 Параметры:
-- **name** — имя MCP-сервера (по умолчанию: `project-agent`)
+- **name** — имя MCP-сервера (по умолчанию: `mcp-github-issues`)
 - **scope** — область видимости: `local`, `user` или `project` (по умолчанию: `user`)
 
 ### Ручная настройка для Claude Desktop
@@ -129,7 +123,7 @@ chmod +x mcp.sh
 ```json
 {
   "mcpServers": {
-    "project-agent": {
+    "mcp-github-issues": {
       "command": "/абсолютный/путь/к/mcp-github-issues/mcp.sh",
       "env": {
         "GITHUB_TOKEN": "ghp_ваш_токен"
@@ -142,7 +136,7 @@ chmod +x mcp.sh
 ### Ручная настройка для Claude Code
 
 ```bash
-claude mcp add -s user -- project-agent /путь/к/mcp-github-issues/mcp.sh
+claude mcp add -s user -- mcp-github-issues /путь/к/mcp-github-issues/mcp.sh
 ```
 
 ### Ручная настройка для PhpStorm / VS Code
@@ -155,7 +149,7 @@ claude mcp add -s user -- project-agent /путь/к/mcp-github-issues/mcp.sh
 
 ## Доступные инструменты (Tools)
 
-Сервер предоставляет 8 инструментов, которые AI-ассистент может вызывать в диалоге.
+Сервер предоставляет 6 инструментов, которые AI-ассистент может вызывать в диалоге.
 
 ### list_projects
 
@@ -166,55 +160,50 @@ claude mcp add -s user -- project-agent /путь/к/mcp-github-issues/mcp.sh
 **Пример использования:**
 > «Покажи мои проекты»
 
-### create_task_draft
+### publish_issue
 
-Создаёт локальный черновик задачи в формате Markdown. Файл сохраняется в `tasks/<проект>/YYYY-MM-DD-<slug>.md`.
+Создаёт GitHub Issue с заголовком, контекстом, списком файлов и чеклистом. Вызывается только после подтверждения пользователя.
 
 **Параметры:**
 
 | Параметр   | Тип      | Обязательный | Описание                                  |
 |-----------|----------|:------------:|-------------------------------------------|
 | project   | string   | да           | Имя проекта из projects.yaml              |
-| title     | string   | да           | Заголовок задачи                          |
-| context   | string   | да           | Описание задачи                           |
+| title     | string   | да           | Заголовок Issue (без префикса типа)       |
+| context   | string   | да           | Описание / контекст задачи                |
 | files     | string[] | нет          | Список затронутых файлов                  |
 | checklist | string[] | нет          | Чеклист подзадач                          |
 | assignee  | string   | нет          | GitHub-юзернейм исполнителя              |
-| type      | string   | нет          | Тип: `bug`, `feature` или `task`          |
-
-**Пример использования:**
-> «Создай задачу для проекта backend: нужно добавить валидацию email в форме регистрации. Затронуты файлы src/validators.ts и src/routes/auth.ts»
-
-### list_drafts
-
-Показывает список неопубликованных черновиков для проекта.
-
-**Параметры:**
-
-| Параметр | Тип    | Обязательный | Описание                     |
-|---------|--------|:------------:|------------------------------|
-| project | string | да           | Имя проекта из projects.yaml |
-
-**Пример использования:**
-> «Покажи черновики задач для backend»
-
-### publish_issue
-
-Публикует черновик как GitHub Issue. Читает локальный `.md`-файл, создаёт Issue через API и возвращает URL.
-
-**Параметры:**
-
-| Параметр  | Тип    | Обязательный | Описание                              |
-|----------|--------|:------------:|---------------------------------------|
-| project  | string | да           | Имя проекта из projects.yaml          |
-| draftFile| string | да           | Абсолютный путь к .md-файлу черновика |
-| assignee | string | нет          | GitHub-юзернейм (переопределяет черновик) |
-| type     | string | нет          | Тип: `bug`, `feature`, `task` (переопределяет черновик) |
+| type      | string   | нет          | Тип: `bug`, `feature` или `task` (по умолчанию: `task`) |
 
 **Маппинг типов на лейблы:** `bug` → `bug`, `feature` → `enhancement`, `task` → `task`
 
+**Формат итогового тела Issue:**
+
+```markdown
+> [!NOTE]
+> The task was generated using the MCP server — prog-time/mcp-github-issues
+
+**Type**: bug
+**Assignee**: @johndoe
+
+## Context
+
+После OAuth-колбэка пользователь редиректится на /login.
+
+## Affected Files
+
+- `src/auth/callback.ts`
+
+## Checklist
+
+- [ ] Воспроизвести баг
+- [ ] Починить сессию
+- [ ] Добавить тест
+```
+
 **Пример использования:**
-> «Опубликуй последний черновик для backend»
+> «Создай задачу в проекте backend: нужно добавить валидацию email в форме регистрации. Затронуты файлы src/validators.ts и src/routes/auth.ts»
 
 ### list_issues
 
@@ -287,27 +276,21 @@ claude mcp add -s user -- project-agent /путь/к/mcp-github-issues/mcp.sh
 
 ## Типичный рабочий процесс
 
-### Шаг 1: Создание черновика
+### Шаг 1: Формулировка задачи
 
-Попросите ИИ создать задачу. Он сформирует локальный `.md`-файл:
+Попросите ИИ создать задачу:
 
 > «Создай задачу для проекта backend: нужно мигрировать базу с MySQL на PostgreSQL. Затронуты файлы: src/database.ts, docker-compose.yml. Чеклист: обновить драйвер, изменить миграции, обновить docker-compose, протестировать»
 
-Результат — файл `tasks/backend/2026-04-13-migrate-database-from-mysql-to-postgresql.md`.
+### Шаг 2: Подтверждение
 
-### Шаг 2: Просмотр и редактирование
-
-Можно посмотреть список черновиков:
-
-> «Покажи черновики для backend»
-
-Файл можно отредактировать вручную в любом текстовом редакторе перед публикацией.
+ИИ покажет вам содержимое будущего Issue (заголовок, тип, контекст, файлы, чеклист) и спросит подтверждение.
 
 ### Шаг 3: Публикация
 
-Когда черновик готов:
+Когда содержимое вас устраивает:
 
-> «Опубликуй последний черновик для backend, назначь на @username»
+> «Да, публикуй и назначь на @username»
 
 Сервер создаст Issue в GitHub и вернёт URL.
 
@@ -334,13 +317,10 @@ mcp-github-issues/
 │       ├── listProjects.ts
 │       ├── listIssues.ts
 │       ├── fetchIssue.ts
-│       ├── draft.ts
-│       ├── listDrafts.ts
 │       ├── publish.ts
 │       ├── addComment.ts
 │       └── updateIssue.ts
 ├── tests/                  # Тесты (Vitest)
-├── tasks/                  # Локальные черновики (по проектам)
 ├── logs/                   # Логи сервера
 ├── projects.yaml           # Конфигурация проектов
 ├── .env                    # Токены GitHub (не в git)
@@ -421,7 +401,6 @@ npx eslint src/ tests/
 ## Безопасность
 
 - Файл `.env` с токенами **не попадает в git** (указан в `.gitignore`)
-- Папка `tasks/` с черновиками также исключена из git
 - Файл `projects.yaml` исключён из git (содержит конфигурацию проектов)
 - Токены читаются из переменных окружения в момент вызова, не при старте сервера
-- Draft-first подход гарантирует, что ничего не публикуется в GitHub без явного вызова `publish_issue`
+- `publish_issue` создаёт Issue только при явном вызове — ИИ сначала формирует содержимое и получает подтверждение пользователя

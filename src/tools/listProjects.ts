@@ -10,13 +10,12 @@ export function register(server: McpServer): void {
       name,
       owner: p.owner,
       repo: p.repo,
-      tasksDir: p.tasksDir,
     }));
 
     logger.info("list_projects done", { count: projects.length });
 
     const lines = projects.map(
-      (p) => `- **${p.name}**: ${p.owner}/${p.repo} (tasks: ${p.tasksDir})`
+      (p) => `- **${p.name}**: ${p.owner}/${p.repo}`
     );
 
     return {

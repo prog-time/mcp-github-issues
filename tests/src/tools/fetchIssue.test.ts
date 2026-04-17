@@ -23,10 +23,8 @@ vi.mock("../../../src/config.js", () => ({
     owner: "myorg",
     repo: "myrepo",
     tokenEnv: "GITHUB_TOKEN_API",
-    tasksDir: "./tasks/api",
   }),
   getToken: vi.fn().mockReturnValue("ghp_testtoken"),
-  resolveTasksDir: vi.fn().mockReturnValue("/abs/tasks/api"),
   getOctokit: vi.fn().mockReturnValue({
     issues: {
       get: mockIssueGet,

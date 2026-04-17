@@ -3,16 +3,6 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // ─── mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock("fs", () => ({
-  default: {
-    existsSync: vi.fn().mockReturnValue(true),
-    readFileSync: vi.fn().mockReturnValue(""),
-    writeFileSync: vi.fn(),
-    mkdirSync: vi.fn(),
-    appendFileSync: vi.fn(),
-  },
-}));
-
 vi.mock("../../../src/logger.js", () => ({
   logger: {
     info: vi.fn(),
@@ -32,10 +22,8 @@ vi.mock("../../../src/config.js", () => ({
     owner: "myorg",
     repo: "myrepo",
     tokenEnv: "GITHUB_TOKEN_API",
-    tasksDir: "./tasks/api",
   }),
   getToken: vi.fn().mockReturnValue("ghp_testtoken"),
-  resolveTasksDir: vi.fn().mockReturnValue("/abs/tasks/api"),
   getOctokit: vi.fn().mockReturnValue({
     issues: { create: mockCreate },
   }),
@@ -43,11 +31,8 @@ vi.mock("../../../src/config.js", () => ({
 
 // ─── imports ─────────────────────────────────────────────────────────────────
 
-import fs from "fs";
 import {
-  extractTitle,
-  extractType,
-  stripTitle,
+  buildTitle,
   buildBody,
   register,
 } from "../../../src/tools/publish.js";
@@ -70,83 +55,24 @@ function createMockServer() {
   return { server, handlers };
 }
 
-const SAMPLE_DRAFT = `# My Task Title
+const SAMPLE_INPUT = {
+  project: "api",
+  title: "My Task Title",
+  context: "Some context here.",
+  files: ["src/app.ts"],
+  checklist: ["Write tests"],
+  type: "feature" as const,
+};
 
-**Type**: feature
+// ─── buildTitle ──────────────────────────────────────────────────────────────
 
-## Context
-
-Some context here.
-
-## Affected Files
-
-- \`src/app.ts\`
-
-## Checklist
-
-- [ ] Write tests
-`;
-
-// ─── extractTitle ─────────────────────────────────────────────────────────────
-
-describe("extractTitle", () => {
-  it("extracts the first heading", () => {
-    expect(extractTitle("# Hello World\n\nBody")).toBe("Hello World");
+describe("buildTitle", () => {
+  it("prefixes the title with uppercased type", () => {
+    expect(buildTitle("Hello World", "bug")).toBe("[BUG] Hello World");
   });
 
-  it("trims whitespace from the title", () => {
-    expect(extractTitle("#   Spaces   \n\nBody")).toBe("Spaces");
-  });
-
-  it("returns 'Untitled' when no heading exists", () => {
-    expect(extractTitle("No heading here")).toBe("Untitled");
-  });
-
-  it("handles multiline documents", () => {
-    expect(extractTitle("Some text\n# Title\nMore text")).toBe("Title");
-  });
-});
-
-// ─── extractType ─────────────────────────────────────────────────────────────
-
-describe("extractType", () => {
-  it("extracts 'bug' type", () => {
-    expect(extractType("**Type**: bug")).toBe("bug");
-  });
-
-  it("extracts 'feature' type", () => {
-    expect(extractType("**Type**: feature")).toBe("feature");
-  });
-
-  it("lowercases the extracted type", () => {
-    expect(extractType("**Type**: FEATURE")).toBe("feature");
-  });
-
-  it("returns null when no type meta line found", () => {
-    expect(extractType("No type info")).toBeNull();
-  });
-
-  it("handles type in a multiline document", () => {
-    expect(extractType(SAMPLE_DRAFT)).toBe("feature");
-  });
-});
-
-// ─── stripTitle ──────────────────────────────────────────────────────────────
-
-describe("stripTitle", () => {
-  it("removes the first heading line", () => {
-    const result = stripTitle("# My Title\n\nBody text");
-    expect(result).not.toContain("# My Title");
-    expect(result).toContain("Body text");
-  });
-
-  it("removes blank lines following the heading", () => {
-    const result = stripTitle("# Title\n\n\nContent");
-    expect(result.startsWith("Content")).toBe(true);
-  });
-
-  it("returns the original string when no heading exists", () => {
-    expect(stripTitle("No heading")).toBe("No heading");
+  it("uppercases mixed-case type", () => {
+    expect(buildTitle("Title", "feature")).toBe("[FEATURE] Title");
   });
 });
 
@@ -154,19 +80,50 @@ describe("stripTitle", () => {
 
 describe("buildBody", () => {
   it("prepends the generated badge", () => {
-    const body = buildBody(SAMPLE_DRAFT);
+    const body = buildBody(SAMPLE_INPUT);
     expect(body).toContain("[!NOTE]");
     expect(body).toContain("mcp-github-issues");
   });
 
   it("does not include the title heading in the body", () => {
-    const body = buildBody(SAMPLE_DRAFT);
+    const body = buildBody(SAMPLE_INPUT);
     expect(body).not.toContain("# My Task Title");
   });
 
-  it("includes the original content after the badge", () => {
-    const body = buildBody(SAMPLE_DRAFT);
-    expect(body).toContain("Some context here");
+  it("includes the context section", () => {
+    const body = buildBody(SAMPLE_INPUT);
+    expect(body).toContain("## Context");
+    expect(body).toContain("Some context here.");
+  });
+
+  it("renders files as bullets with backticks", () => {
+    const body = buildBody(SAMPLE_INPUT);
+    expect(body).toContain("- `src/app.ts`");
+  });
+
+  it("renders checklist as unchecked items", () => {
+    const body = buildBody(SAMPLE_INPUT);
+    expect(body).toContain("- [ ] Write tests");
+  });
+
+  it("falls back to placeholder when files list is empty", () => {
+    const body = buildBody({ ...SAMPLE_INPUT, files: [] });
+    expect(body).toContain("_No files specified_");
+  });
+
+  it("falls back to placeholder when checklist is empty", () => {
+    const body = buildBody({ ...SAMPLE_INPUT, checklist: [] });
+    expect(body).toContain("_No checklist items_");
+  });
+
+  it("includes assignee meta line when provided", () => {
+    const body = buildBody({ ...SAMPLE_INPUT, assignee: "johndoe" });
+    expect(body).toContain("**Assignee**: @johndoe");
+  });
+
+  it("omits assignee meta line when not provided", () => {
+    const body = buildBody(SAMPLE_INPUT);
+    expect(body).not.toContain("**Assignee**");
   });
 });
 
@@ -179,9 +136,6 @@ describe("publish_issue handler", () => {
     const mock = createMockServer();
     register(mock.server);
     handlers = mock.handlers;
-
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(SAMPLE_DRAFT);
 
     mockCreate.mockResolvedValue({
       data: {
@@ -197,41 +151,28 @@ describe("publish_issue handler", () => {
   });
 
   it("calls octokit.issues.create with correct owner and repo", async () => {
-    await handlers["publish_issue"]({
-      project: "api",
-      draftFile: "/abs/tasks/api/2026-02-26-my-task.md",
-    });
+    await handlers["publish_issue"]({ ...SAMPLE_INPUT });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ owner: "myorg", repo: "myrepo" })
     );
   });
 
   it("prefixes the title with the type tag [FEATURE]", async () => {
-    await handlers["publish_issue"]({
-      project: "api",
-      draftFile: "/abs/tasks/api/2026-02-26-my-task.md",
-    });
+    await handlers["publish_issue"]({ ...SAMPLE_INPUT });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ title: "[FEATURE] My Task Title" })
     );
   });
 
   it("sets the label based on the type", async () => {
-    await handlers["publish_issue"]({
-      project: "api",
-      draftFile: "/abs/tasks/api/2026-02-26-my-task.md",
-    });
+    await handlers["publish_issue"]({ ...SAMPLE_INPUT });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ labels: ["enhancement"] })
     );
   });
 
-  it("overrides the type when explicitly provided", async () => {
-    await handlers["publish_issue"]({
-      project: "api",
-      draftFile: "/abs/tasks/api/2026-02-26-my-task.md",
-      type: "bug",
-    });
+  it("maps bug type to bug label", async () => {
+    await handlers["publish_issue"]({ ...SAMPLE_INPUT, type: "bug" });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "[BUG] My Task Title",
@@ -240,31 +181,38 @@ describe("publish_issue handler", () => {
     );
   });
 
+  it("maps task type to task label", async () => {
+    await handlers["publish_issue"]({ ...SAMPLE_INPUT, type: "task" });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "[TASK] My Task Title",
+        labels: ["task"],
+      })
+    );
+  });
+
+  it("passes the assignee to octokit when provided", async () => {
+    await handlers["publish_issue"]({ ...SAMPLE_INPUT, assignee: "johndoe" });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ assignees: ["johndoe"] })
+    );
+  });
+
+  it("omits assignees when not provided", async () => {
+    await handlers["publish_issue"]({ ...SAMPLE_INPUT });
+    const call = mockCreate.mock.calls[0][0];
+    expect(call).not.toHaveProperty("assignees");
+  });
+
   it("returns the issue URL in the response", async () => {
-    const result = await handlers["publish_issue"]({
-      project: "api",
-      draftFile: "/abs/tasks/api/2026-02-26-my-task.md",
-    });
+    const result = await handlers["publish_issue"]({ ...SAMPLE_INPUT });
     expect(result.content[0].text).toContain(
       "https://github.com/myorg/myrepo/issues/42"
     );
   });
 
   it("returns the issue number in the response", async () => {
-    const result = await handlers["publish_issue"]({
-      project: "api",
-      draftFile: "/abs/tasks/api/2026-02-26-my-task.md",
-    });
+    const result = await handlers["publish_issue"]({ ...SAMPLE_INPUT });
     expect(result.content[0].text).toContain("#42");
-  });
-
-  it("throws when the draft file does not exist", async () => {
-    vi.mocked(fs.existsSync).mockReturnValue(false);
-    await expect(
-      handlers["publish_issue"]({
-        project: "api",
-        draftFile: "/nonexistent/file.md",
-      })
-    ).rejects.toThrow("Draft file not found");
   });
 });

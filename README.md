@@ -2,7 +2,7 @@
 
 An MCP (Model Context Protocol) server that lets AI assistants manage GitHub Issues across multiple projects — without ever leaving the chat.
 
-The workflow is deliberate: the AI **drafts** a task as a local Markdown file first, you review it, then it **publishes** to GitHub on your command. No silent API calls.
+You describe a task in plain language and the AI publishes it as a GitHub Issue on your confirmation — no silent API calls, no intermediate files.
 
 ---
 
@@ -15,10 +15,6 @@ AI assistant
     │
     ├─ fetch_issue ─────────► reads full issue context (body + comments)
     │
-    ├─ create_task_draft ───► tasks/<project>/2026-04-11-fix-login-bug.md  (local, review it)
-    │
-    ├─ list_drafts ─────────► shows all unpublished local drafts
-    │
     ├─ publish_issue ───────► github.com/your-org/your-repo/issues/42     (only after you confirm)
     │
     ├─ add_comment ─────────► posts a comment on an existing issue
@@ -27,9 +23,8 @@ AI assistant
 ```
 
 1. You describe a task to your AI assistant in plain language.
-2. The server saves a structured `.md` draft locally.
-3. You review or edit the file.
-4. You tell the AI to publish — it creates the GitHub Issue via the API.
+2. The AI proposes the issue content (title, context, files, checklist).
+3. You confirm — the AI calls `publish_issue` and the Issue is created via the GitHub API.
 
 ---
 
@@ -82,7 +77,6 @@ projects:
     owner: your-org          # GitHub organization or username
     repo: your-repo          # Repository name
     tokenEnv: GITHUB_TOKEN_MYPROJECT   # Must match a key in .env
-    tasksDir: ./tasks/myproject        # Where draft .md files are stored
 ```
 
 Multiple projects:
@@ -93,24 +87,19 @@ projects:
     owner: acme-corp
     repo: backend-api
     tokenEnv: GITHUB_TOKEN_API
-    tasksDir: ./tasks/api
 
   web:
     owner: acme-corp
     repo: frontend
     tokenEnv: GITHUB_TOKEN_WEB
-    tasksDir: ./tasks/web
 
   oss:
     owner: your-username
     repo: open-source-lib
     tokenEnv: GITHUB_TOKEN_OSS
-    tasksDir: ./tasks/oss
 ```
 
 The config is validated with Zod on startup — missing or empty fields are reported immediately with clear error messages.
-
-Task directories are created automatically when the first draft is saved.
 
 ---
 
@@ -122,18 +111,18 @@ Task directories are created automatically when the first draft is saved.
 ./mcp.sh setup
 ```
 
-Registers the server as `project-agent` with user-level scope (visible in all your projects):
+Registers the server as `mcp-github-issues` with user-level scope (visible in all your projects):
 
 ```
 === mcp-github-issues MCP Setup ===
-  Server name : project-agent
+  Server name : mcp-github-issues
   Scope       : user
   Dir         : /path/to/mcp-github-issues
 
 [1/3] Installing dependencies... Done.
-[2/3] Registering MCP server with Claude CLI... Registered 'project-agent' (scope: user).
+[2/3] Registering MCP server with Claude CLI... Registered 'mcp-github-issues' (scope: user).
 [3/3] Verifying...
-  project-agent: /path/to/mcp.sh - ✓ Connected
+  mcp-github-issues: /path/to/mcp.sh - ✓ Connected
 
 === Setup complete! ===
 ```
@@ -150,7 +139,7 @@ Custom server name or scope:
 
 ```bash
 npm install
-claude mcp add -s user -- project-agent /absolute/path/to/mcp-github-issues/mcp.sh
+claude mcp add -s user -- mcp-github-issues /absolute/path/to/mcp-github-issues/mcp.sh
 ```
 
 ---
@@ -163,7 +152,7 @@ After running `./mcp.sh setup`, the server is registered automatically. Verify:
 
 ```bash
 claude mcp list
-# project-agent: /path/to/mcp.sh - ✓ Connected
+# mcp-github-issues: /path/to/mcp.sh - ✓ Connected
 ```
 
 ### Claude Desktop (macOS / Windows)
@@ -173,7 +162,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 ```json
 {
   "mcpServers": {
-    "project-agent": {
+    "mcp-github-issues": {
       "command": "/absolute/path/to/mcp-github-issues/mcp.sh",
       "env": {}
     }
@@ -222,24 +211,34 @@ Fetches a GitHub Issue by number or URL and returns its full context (descriptio
 
 ---
 
-### `create_task_draft`
+### `publish_issue`
 
-Creates a structured Markdown draft locally. Does **not** touch GitHub.
+Creates a new GitHub Issue directly, with structured context. Call this only after the user has reviewed and confirmed the content.
 
 | Parameter   | Type       | Required | Description                                          |
 |-------------|------------|----------|------------------------------------------------------|
 | `project`   | `string`   | yes      | Project name from `projects.yaml`                    |
-| `title`     | `string`   | yes      | Issue title                                          |
+| `title`     | `string`   | yes      | Issue title (without type prefix)                    |
 | `context`   | `string`   | yes      | Description / background                             |
 | `files`     | `string[]` | no       | Affected file paths                                  |
 | `checklist` | `string[]` | no       | Checklist items                                      |
 | `assignee`  | `string`   | no       | GitHub username to assign                            |
 | `type`      | `string`   | no       | `bug` \| `feature` \| `task` (default: `task`)       |
 
-The draft is saved to `tasks/<project>/YYYY-MM-DD-<slug>.md`:
+**What happens at publish time:**
+
+- **Title** — prefixed with the type tag: `[BUG] Fix ...`, `[FEATURE] Add ...`, `[TASK] Refactor ...`
+- **Label** — applied automatically based on type:
+  - `bug` → `bug`
+  - `feature` → `enhancement`
+  - `task` → `task`
+- **Body** — generated from `context`, `files`, and `checklist` with a "generated by MCP" badge prepended
+
+Example body:
 
 ```markdown
-# Fix login redirect loop
+> [!NOTE]
+> The task was generated using the MCP server — prog-time/mcp-github-issues
 
 **Type**: bug
 **Assignee**: @johndoe
@@ -259,38 +258,6 @@ After OAuth callback, users are redirected back to /login instead of the dashboa
 - [ ] Check session token expiry logic
 - [ ] Add integration test for OAuth flow
 ```
-
----
-
-### `list_drafts`
-
-Lists all unpublished local draft files for a project, with their titles and paths.
-
-| Parameter | Type     | Required | Description                       |
-|-----------|----------|----------|-----------------------------------|
-| `project` | `string` | yes      | Project name from `projects.yaml` |
-
----
-
-### `publish_issue`
-
-Reads a draft `.md` file and creates a GitHub Issue. Call this only after the user has reviewed the draft.
-
-| Parameter   | Type     | Required | Description                                           |
-|-------------|----------|----------|-------------------------------------------------------|
-| `project`   | `string` | yes      | Project name from `projects.yaml`                     |
-| `draftFile` | `string` | yes      | Absolute path to the draft `.md` file                 |
-| `assignee`  | `string` | no       | GitHub username to assign (optional)                  |
-| `type`      | `string` | no       | Overrides the type from the draft (`bug`, `feature`, `task`) |
-
-**What happens at publish time:**
-
-- **Title** — taken from the `# Heading` line of the draft as-is
-- **Label** — applied automatically based on type:
-  - `bug` → `bug`
-  - `feature` → `enhancement`
-  - `task` → `task`
-- **Body** — the `# Title` heading is stripped (already in the issue title field), and a generated-by badge is prepended
 
 ---
 
@@ -328,11 +295,15 @@ Updates an existing GitHub Issue: change state, title, assignee, or labels.
 You:  In project "api", create a task: the login page has a redirect loop after OAuth.
       Affected files: src/auth/callback.ts. Add a checklist for the fix.
 
-AI:   Draft saved to tasks/api/2026-04-11-fix-login-redirect-loop.md
-      [shows full markdown]
-      Review it and let me know if you'd like to publish.
+AI:   Here's the proposed issue:
+      Title: Fix login redirect loop after OAuth
+      Type: bug
+      Context: ...
+      Files: src/auth/callback.ts
+      Checklist: reproduce, check session expiry, add test
+      Publish it?
 
-You:  Looks good, publish it and assign to johndoe.
+You:  Yes, publish and assign to johndoe.
 
 AI:   Issue #42 created: https://github.com/acme-corp/backend-api/issues/42
 
@@ -356,8 +327,6 @@ mcp-github-issues/
 │       ├── listProjects.ts
 │       ├── listIssues.ts
 │       ├── fetchIssue.ts
-│       ├── draft.ts
-│       ├── listDrafts.ts
 │       ├── publish.ts
 │       ├── addComment.ts
 │       └── updateIssue.ts
@@ -366,16 +335,12 @@ mcp-github-issues/
 │       ├── config.test.ts
 │       ├── router.test.ts
 │       └── tools/
-│           ├── draft.test.ts
 │           ├── fetchIssue.test.ts
 │           ├── listProjects.test.ts
 │           ├── listIssues.test.ts
-│           ├── listDrafts.test.ts
 │           ├── addComment.test.ts
 │           ├── updateIssue.test.ts
 │           └── publish.test.ts
-├── tasks/                 # Auto-created; stores draft .md files
-│   └── <project>/
 ├── logs/
 │   └── server.log         # Server log (auto-created)
 ├── projects.yaml          # Your project definitions
@@ -405,7 +370,7 @@ tail -f logs/server.log
 
 Claude Desktop log location (macOS):
 ```
-~/Library/Logs/Claude/mcp-server-project-agent.log
+~/Library/Logs/Claude/mcp-server-mcp-github-issues.log
 ```
 
 ---

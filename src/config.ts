@@ -16,7 +16,6 @@ const ProjectConfigSchema = z.object({
   owner: z.string().min(1, "owner must not be empty"),
   repo: z.string().min(1, "repo must not be empty"),
   tokenEnv: z.string().min(1, "tokenEnv must not be empty"),
-  tasksDir: z.string().min(1, "tasksDir must not be empty"),
 });
 
 const ConfigSchema = z.object({
@@ -70,10 +69,6 @@ export function getToken(project: ProjectConfig): string {
     );
   }
   return token;
-}
-
-export function resolveTasksDir(project: ProjectConfig): string {
-  return path.resolve(__dirname, "..", project.tasksDir);
 }
 
 // ─── octokit cache ────────────────────────────────────────────────────────────
