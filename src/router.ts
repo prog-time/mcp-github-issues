@@ -5,6 +5,7 @@ import * as fetchIssue from "./tools/fetchIssue.js";
 import * as listIssues from "./tools/listIssues.js";
 import * as addComment from "./tools/addComment.js";
 import * as updateIssue from "./tools/updateIssue.js";
+import * as createPullRequest from "./tools/createPullRequest.js";
 
 export function registerAllTools(server: McpServer): void {
   listProjects.register(server);
@@ -13,4 +14,5 @@ export function registerAllTools(server: McpServer): void {
   listIssues.register(server);
   addComment.register(server);
   updateIssue.register(server);
+  createPullRequest.register(server);
 }

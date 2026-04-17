@@ -149,7 +149,7 @@ claude mcp add -s user -- mcp-github-issues /путь/к/mcp-github-issues/mcp.s
 
 ## Доступные инструменты (Tools)
 
-Сервер предоставляет 6 инструментов, которые AI-ассистент может вызывать в диалоге.
+Сервер предоставляет 7 инструментов, которые AI-ассистент может вызывать в диалоге.
 
 ### list_projects
 
@@ -272,6 +272,27 @@ claude mcp add -s user -- mcp-github-issues /путь/к/mcp-github-issues/mcp.s
 **Пример использования:**
 > «Закрой Issue #42 в backend и добавь лейбл "done"»
 
+### create_pull_request
+
+Создаёт GitHub Pull Request для настроенного проекта одной командой.
+
+**Параметры:**
+
+| Параметр               | Тип     | Обязательный | Описание                                                                          |
+|-----------------------|---------|:------------:|-----------------------------------------------------------------------------------|
+| project               | string  | да           | Имя проекта из projects.yaml                                                      |
+| title                 | string  | да           | Заголовок Pull Request                                                            |
+| head                  | string  | да           | Ветка с изменениями (например, `feature/my-feature` или `fork-owner:branch`)     |
+| base                  | string  | нет          | Целевая ветка для merge (по умолчанию: `main`)                                    |
+| body                  | string  | нет          | Описание PR (поддерживает Markdown)                                               |
+| draft                 | boolean | нет          | Создать как черновик (по умолчанию: `false`)                                      |
+| maintainer_can_modify | boolean | нет          | Разрешить мейнтейнерам редактировать ветку PR (актуально для форков)             |
+
+Возвращает номер PR и ссылку на него (`html_url`).
+
+**Пример использования:**
+> «Создай PR в backend: смержи ветку feature/add-email-validation в main. Заголовок: "Add email validation on registration"»
+
 ---
 
 ## Типичный рабочий процесс
@@ -319,7 +340,8 @@ mcp-github-issues/
 │       ├── fetchIssue.ts
 │       ├── publish.ts
 │       ├── addComment.ts
-│       └── updateIssue.ts
+│       ├── updateIssue.ts
+│       └── createPullRequest.ts
 ├── tests/                  # Тесты (Vitest)
 ├── logs/                   # Логи сервера
 ├── projects.yaml           # Конфигурация проектов

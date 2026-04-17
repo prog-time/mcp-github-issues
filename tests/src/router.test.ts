@@ -11,6 +11,7 @@ vi.mock("../../src/tools/fetchIssue.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/listIssues.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/addComment.js", () => ({ register: mockRegister }));
 vi.mock("../../src/tools/updateIssue.js", () => ({ register: mockRegister }));
+vi.mock("../../src/tools/createPullRequest.js", () => ({ register: mockRegister }));
 
 // ─── imports ─────────────────────────────────────────────────────────────────
 
@@ -23,10 +24,10 @@ describe("registerAllTools", () => {
     vi.clearAllMocks();
   });
 
-  it("registers all 6 tools", () => {
+  it("registers all 7 tools", () => {
     const server = {} as McpServer;
     registerAllTools(server);
-    expect(mockRegister).toHaveBeenCalledTimes(6);
+    expect(mockRegister).toHaveBeenCalledTimes(7);
   });
 
   it("passes the server instance to each register call", () => {

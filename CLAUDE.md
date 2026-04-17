@@ -29,7 +29,8 @@ mcp-github-issues/
 │       ├── listIssues.ts
 │       ├── fetchIssue.ts
 │       ├── addComment.ts
-│       └── updateIssue.ts
+│       ├── updateIssue.ts
+│       └── createPullRequest.ts
 ├── tests/                 # Vitest unit tests
 ├── logs/                  # Server logs (gitignored)
 ├── projects.yaml          # Project config (gitignored, use projects.yaml.example)
@@ -61,7 +62,7 @@ const server = new McpServer({ name: "mcp-github-issues", version: "1.2.0" });
 await server.connect(new StdioServerTransport());
 ```
 
-## Tools (6 total)
+## Tools (7 total)
 
 ### 1. `list_projects`
 - No input.
@@ -89,6 +90,11 @@ await server.connect(new StdioServerTransport());
 ### 6. `update_issue`
 - Input: `project`, `issue`, `state` (optional), `title` (optional), `assignee` (optional, null to remove), `add_labels` (optional), `remove_labels` (optional)
 - Updates state, title, assignee, or labels of an existing Issue.
+
+### 7. `create_pull_request`
+- Input: `project`, `title`, `head` (branch or `owner:branch`), `base` (default: `main`), `body` (optional), `draft` (default: `false`), `maintainer_can_modify` (optional)
+- Creates a GitHub Pull Request via Octokit (`pulls.create`).
+- Returns the PR number and `html_url`.
 
 ## Issue Body Template
 
