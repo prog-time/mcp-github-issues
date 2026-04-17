@@ -3,7 +3,7 @@
 #   ./mcp.sh           — start the MCP server (called by Claude)
 #   ./mcp.sh setup     — install dependencies and register with Claude CLI
 #   ./mcp.sh setup <name> <scope>
-#       name  : MCP server name (default: project-agent)
+#       name  : MCP server name (default: mcp-github-issues)
 #       scope : local | user | project (default: user)
 set -euo pipefail
 
@@ -47,7 +47,7 @@ cmd_start() {
 }
 
 cmd_setup() {
-  local name="${1:-project-agent}"
+  local name="${1:-mcp-github-issues}"
   local scope="${2:-user}"
 
   echo "=== mcp-github-issues MCP Setup ==="
