@@ -289,6 +289,24 @@ Updates an existing GitHub Issue: change state, title, assignee, or labels.
 
 ---
 
+### `create_pull_request`
+
+Creates a new GitHub Pull Request for a configured project.
+
+| Parameter               | Type      | Required | Description                                                                         |
+|-------------------------|-----------|----------|-------------------------------------------------------------------------------------|
+| `project`               | `string`  | yes      | Project name from `projects.yaml`                                                   |
+| `title`                 | `string`  | yes      | Pull request title                                                                  |
+| `head`                  | `string`  | yes      | Branch with changes (e.g. `feature/my-feature` or `fork-owner:branch`)             |
+| `base`                  | `string`  | no       | Target branch to merge into (default: `main`)                                       |
+| `body`                  | `string`  | no       | PR description (raw Markdown)                                                       |
+| `draft`                 | `boolean` | no       | Create as draft PR (default: `false`)                                               |
+| `maintainer_can_modify` | `boolean` | no       | Allow maintainers to edit the PR head branch (applies to cross-repo PRs only)       |
+
+Returns the PR number and `html_url`.
+
+---
+
 ## Typical conversation
 
 ```
@@ -329,7 +347,8 @@ mcp-github-issues/
 │       ├── fetchIssue.ts
 │       ├── publish.ts
 │       ├── addComment.ts
-│       └── updateIssue.ts
+│       ├── updateIssue.ts
+│       └── createPullRequest.ts
 ├── tests/
 │   └── src/
 │       ├── config.test.ts
